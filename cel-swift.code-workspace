@@ -1,0 +1,23 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": true,
+        "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB",
+        "lldb.launch.expressions": "native",
+        "files.exclude": {
+            ".build": true,
+            ".swiftpm": true
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "sswg.swift-lang",
+            "vadimcn.vscode-lldb"
+        ]
+    }
+}
