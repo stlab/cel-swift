@@ -56,6 +56,6 @@ final class cel_swiftTests: XCTestCase {
         XCTAssertEqual(stack.unsafePop() as Int, 42)
 
         // Verify stack is empty
-        XCTAssertEqual(stack.size, 0)
+        XCTAssert(stack.empty)
     }
 }

@@ -1,10 +1,10 @@
 {
     "editor.formatOnSave": true,
     "editor.formatOnPaste": true,
-    "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB",
+    "lldb.library": "C:\\Users\\seanp\\AppData\\Local\\Programs\\Swift\\Toolchains\\6.0.2+Asserts\\usr\\bin\\liblldb.dll",
     "lldb.launch.expressions": "native",
     "files.exclude": {
         ".build": true,
         ".swiftpm": true
     }
-} 
+}

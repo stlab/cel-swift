@@ -31,14 +31,14 @@ extension MemoryLayout {
 /// to ensure that the type parameter matches the value at the top of the stack.
 public struct RawStack {
     private static let blockLimit = 4096  // roughly 4KB blocks
-    private var buffer: [[UInt8]]
-    private var currentBlock: UInt32 = 0
+    private var buffer: [[UInt8]] = [[]]
+    private var currentBlock = 0
 
     /// Creates a new `RawStack` with an initial capacity.
     ///
     /// - Returns: A new empty `RawStack`
     public init() {
-        buffer = []
+        buffer[currentBlock].reserveCapacity(RawStack.blockLimit)
     }
 
     /// Pushes a value of type `T` onto the stack.
@@ -50,18 +50,25 @@ public struct RawStack {
     /// - Complexity: O(1) amortized
     public mutating func push<T>(consuming value: T) {
         // Grow the buffer to hold an aligned value of type T
-        let initialLength = buffer.count
-        buffer.append(
+        if (buffer[currentBlock].count + MemoryLayout<T>.maximumSize) > RawStack.blockLimit {
+            currentBlock += 1
+            if currentBlock == buffer.count {
+                buffer.append([])
+                buffer[currentBlock].reserveCapacity(RawStack.blockLimit)
+            }
+        }
+        let initialLength = buffer[currentBlock].count
+        buffer[currentBlock].append(
             contentsOf: repeatElement(0, count: MemoryLayout<T>.maximumSize))
-        let offset = buffer.withUnsafeMutableBufferPointer { ptr in
+        let offset = buffer[currentBlock].withUnsafeMutableBufferPointer { ptr in
             let alignedPtr = unsafeAligned(ptr.baseAddress! + initialLength, for: T.self)
             UnsafeMutableRawPointer(alignedPtr).initializeMemory(
                 as: T.self,
                 to: value)
             return alignedPtr - ptr.baseAddress!
         }
-        buffer.removeSubrange(initialLength..<offset)
-        buffer.removeLast(MemoryLayout<T>.alignment - 1)
+        buffer[currentBlock].removeSubrange(initialLength..<offset)
+        buffer[currentBlock].removeLast(MemoryLayout<T>.alignment - 1)
     }
 
     /// Pops a value of type `T` from the stack.
@@ -73,9 +80,14 @@ public struct RawStack {
     public mutating func unsafePop<T>() -> T {
         // We need to ensure that value T at the top of the stack is properly aligned
         // First grow the buffer so T can be aligned within it.
-        let initialLength = buffer.count
-        buffer.append(contentsOf: repeatElement(0, count: MemoryLayout<T>.alignment - 1))
-        let result = buffer.withUnsafeMutableBufferPointer { ptr in
+        if buffer[currentBlock].isEmpty {
+            currentBlock -= 1
+        }
+
+        let initialLength = buffer[currentBlock].count
+        buffer[currentBlock].append(
+            contentsOf: repeatElement(0, count: MemoryLayout<T>.alignment - 1))
+        let result = buffer[currentBlock].withUnsafeMutableBufferPointer { ptr in
             let alignedPtr = unsafeAligned(
                 ptr.baseAddress! + initialLength - MemoryLayout<T>.size, for: T.self)
             let size = MemoryLayout<T>.size
@@ -83,7 +95,7 @@ public struct RawStack {
                 from: ptr.baseAddress! + initialLength - size, byteCount: size)
             return UnsafeMutableRawPointer(alignedPtr).assumingMemoryBound(to: T.self).move()
         }
-        buffer.removeLast(MemoryLayout<T>.maximumSize)
+        buffer[currentBlock].removeLast(MemoryLayout<T>.maximumSize)
         return result
     }
 
@@ -99,7 +111,7 @@ public struct RawStack {
 #if DEBUG
     extension RawStack {
         /// Returns the current size of the stack in bytes
-        public var size: Int { buffer.count }
+        public var empty: Bool { currentBlock == 0 && buffer[currentBlock].isEmpty }
 
         /// Returns the raw buffer contents (for debugging)
         public var debugDescription: String {
